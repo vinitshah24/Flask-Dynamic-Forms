@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>Dynamic Forms</title>
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
+
+    <script src="https://code.jquery.com/jquery-2.0.3.min.js"></script>
+    <script src="https://momentjs.com/downloads/moment.min.js"></script>
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.0.0/js/bootstrap.min.js"></script>
+
+</head>
+<body class="bg-light">
+    <div class="container mt-5 mb-5">
+        <div class="row">
+            <div class="col-sm-10 offset-sm-1 col-md-10 offset-md-1 mt-4 mb-4">
+                <div class="row">
+                    <div class="col-md-8 offset-md-2 border border-secondary rounded bg-white">
+                        <div class="container mt-4">
+                            <h3 class="text-center mb-4 mt-2">Form</h3>
+                            <form method="POST" action="/">
+                                <ul id="form">
+                                    {% for field_item in form %}
+                                        {% if field_item is iterable %}
+                                        <li>
+                                        <b>{{ field_item.label }}</b>
+                                        </li>
+                                        <ul id="{{field_item.name}}" class="list-unstyled">
+                                            {% for field in field_item %}
+                                            <li>{{field.label}} {{ field }}
+                                                <span id="{{field_item.name}}"
+                                                class="btn-add btn btn-sm btn-success">Add</span>
+                                            </li>
+                                            {% endfor %}
+                                        </ul>
+                                        {% else %}
+                                        <li>{{field_item.label}} {{ field_item() }}</li>
+                                        {% endif %}
+                                    {% endfor %}
+                                </ul>
+                                <button type="button" id="submit" class="btn btn-primary">Submit</button>
+                            </form>
+                        </div>
+                        <div id="status" class="container mt-4 mb-4"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="text/javascript">
+        $(document).ready(function () {
+
+            // Submit POST request using AJAX
+            $('button#submit').bind('click', function () {
+                $.ajax({
+                    type: 'POST',
+                    url: $("form").attr("action"),
+                    data: $("form").serialize(),
+                    success: function (response) {
+                        $('div#status').stop(true, true).show().text(Object.values(response)
+                        ).fadeOut(10000);
+                    },
+                    error: function (request, status, error) {
+                        $('div#status').show().text("Data not saved: " + error)
+                    },
+                });
+            });
+
+            function capitalizeFirstLetter(string) {
+                return string.charAt(0).toUpperCase() + string.slice(1);
+            }
+
+            // Initialize add/remove buttons
+            Object.values(document.querySelectorAll('ul#form ul')).forEach(function (node) {
+                $('ul#form').find('ul#' + node.id + ' li:not(:last) .btn-add')
+                    .removeClass('btn-add').addClass('btn-remove')
+                    .removeClass('btn-success').addClass('btn-danger')
+                    .html('Remove');
+            });
+
+            // Dynamically add form fields
+            $(document).on('click', '.btn-add', function (e) {
+                e.preventDefault();
+
+                var button_id = $(this).attr('id'),
+                    controlForm = $('ul#form'),
+                    currentEntry = $(this).parents('ul#' + button_id + ' li:last'),
+                    newEntry = $(currentEntry.clone());
+
+                // clear input field before adding to DOM
+                newEntry.find('input').val('');
+
+                // Increment id, name attributes for WTForms to pick up the values
+                newEntry.find('input').attr("id", function (i, origValue) {
+                    return origValue.replace(/(\d)/g, function (a, b) {
+                        return +b + 1;
+                    });
+                });
+
+                newEntry.find('input').attr("name", function (i, origValue) {
+                    return origValue.replace(/(\d)/g, function (a, b) {
+                        return +b + 1;
+                    });
+                });
+
+                // Change labels as well for the sake of clarity
+                newEntry.find('label').attr("for", function (i, origValue) {
+                    return origValue.replace(/(\d)/g, function (a, b) {
+                        return +b + 1;
+                    });
+                });
+
+                // Check if the label belongs to an embedded form
+                // If it's parent is a <th>, dont use the text from 'for' attr
+                newEntry.find('label').text(function (i, oldText) {
+                    if ($(this).parent().prop("tagName") === "TH") {
+                        return oldText;
+                    } else {
+                        return capitalizeFirstLetter($(this).attr("for"));
+                    }
+                });
+                newEntry.appendTo($('ul#form ul#' + button_id));
+
+                controlForm.find('ul#' + button_id + ' li:not(:last) .btn-add')
+                    .removeClass('btn-add').addClass('btn-remove')
+                    .removeClass('btn-success').addClass('btn-danger')
+                    .html('Remove');
+
+            }).on('click', '.btn-remove', function (e) {
+                var button_id = $(this).attr('id');
+                $(this).parents('ul#' + button_id + ' li:first').remove();
+
+                e.preventDefault();
+                return false;
+            });
+
+        });
+    </script>
+</body>
+</html>
